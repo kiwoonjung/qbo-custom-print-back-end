@@ -1,23 +1,30 @@
 import express from "express";
-import cors from "cors";
+import "dotenv/config";
 import invoiceRoutes from "./routes/invoice.js";
 import companyRoutes from "./routes/companyInfo.js";
-
-// const express = require("express");
-// const axios = require("axios");
-// const cors = require("cors");
+import authRoutes from "./routes/auth.js";
+import errorHandler from "./middleware/errorHandler.js";
+import logger from "./middleware/logger.js";
+// import auth from "./middleware/auth.js";
+import cors from "./middleware/cors.js";
 
 const app = express();
 
-// Enable CORS for testing (optional)
-app.use(cors());
+// Middleware
+app.use(cors); // CORS middleware
+app.use(logger); // Logging middleware
+app.use(express.json()); // Parse JSON request bodies
+
+// Error handling middleware (must be the last middleware)
+app.use(errorHandler);
 
 /* ROUTES */
+app.use("/auth", authRoutes);
 app.use("/invoice", invoiceRoutes);
 app.use("/companyInfo", companyRoutes);
 
 // Start the server
-const PORT = 8000;
+const PORT = process.env.PORT;
 app.listen(PORT, () => {
   console.log(`Proxy server running on http://localhost:${PORT}`);
 });
