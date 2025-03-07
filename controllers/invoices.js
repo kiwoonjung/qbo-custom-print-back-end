@@ -5,8 +5,10 @@ export const getInvoice = async (req, res) => {
   const { accessToken, realmId } = req.query;
   try {
     // Make a request to the QuickBooks API
+    // https://quickbooks.api.intuit.com
+
     const response = await axios.get(
-      `https://sandbox-quickbooks.api.intuit.com/v3/company/9341454187481835/invoice/129/?minorversion=75`,
+      `https://sandbox-quickbooks.api.intuit.com/v3/company/${process.env.COMPANY_ID}/invoice/15674/?minorversion=75`,
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,
