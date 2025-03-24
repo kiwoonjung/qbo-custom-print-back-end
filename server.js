@@ -14,7 +14,9 @@ const app = express();
 app.use(
   cors({
     origin: [
-      "chrome-extension://bkcjiigjjabcnlkcnjkbdeacehmcpbdn", // Your specific extension origin
+      "chrome-extension://bkcjiigjjabcnlkcnjkbdeacehmcpbdn",
+      "chrome-extension://jdpebblpkmmcgldefddicgblgkggkpid",
+      // Your specific extension origin
       "*", // Allow all origins, use carefully in production
     ],
   })
