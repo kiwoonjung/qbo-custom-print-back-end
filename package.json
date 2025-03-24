@@ -8,7 +8,8 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/kiwoonjung/qbo-custom-print-back-end.git"
+    "url": "git+https://github.com/kiwoonjung/qbo-custom-print-back-end.git",
+    "start": "node server.js"
   },
   "keywords": [],
   "author": "",
