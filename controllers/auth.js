@@ -57,7 +57,7 @@ export const exchangeCode = async (req, res) => {
     res.json({
       access_token: response.data.access_token,
       refresh_token: response.data.refresh_token,
-      realmId: response.data.realmId || "9341454187481835", // Fallback realmId
+      realmId: response.data.realmId || "9341452598743112", // Fallback realmId
     });
   } catch (error) {
     console.error(
