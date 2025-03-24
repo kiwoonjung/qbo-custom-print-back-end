@@ -14,8 +14,7 @@ const app = express();
 // Middleware
 app.use(
   cors({
-    origin: "*", // Allow any origin, or specify your extension's domain
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    origin: "*", // Allow requests from any origin (use cautiously)
   })
 );
 app.use(logger); // Logging middleware
