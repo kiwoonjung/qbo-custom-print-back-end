@@ -12,7 +12,12 @@ import cors from "./middleware/cors.js";
 const app = express();
 
 // Middleware
-app.use(cors); // CORS middleware
+app.use(
+  cors({
+    origin: "*", // Allow any origin, or specify your extension's domain
+    methods: ["GET", "POST", "PUT", "DELETE"],
+  })
+);
 app.use(logger); // Logging middleware
 app.use(express.json()); // Parse JSON request bodies
 
