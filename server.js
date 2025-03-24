@@ -14,7 +14,7 @@ const app = express();
 // Middleware
 app.use(
   cors({
-    origin: "*", // Allow requests from any origin (use cautiously)
+    origin: "chrome-extension://bkcjiigjjabcnlkcnjkbdeacehmcpbdn", // Only allow your Chrome extension
   })
 );
 app.use(logger); // Logging middleware
