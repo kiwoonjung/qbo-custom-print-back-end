@@ -3,6 +3,7 @@ import "dotenv/config";
 import invoiceRoutes from "./routes/invoice.js";
 import companyRoutes from "./routes/companyInfo.js";
 import authRoutes from "./routes/auth.js";
+import customerRoutes from "./routes/companyInfo.js";
 import errorHandler from "./middleware/errorHandler.js";
 import logger from "./middleware/logger.js";
 // import auth from "./middleware/auth.js";
@@ -22,6 +23,7 @@ app.use(errorHandler);
 app.use("/auth", authRoutes);
 app.use("/invoice", invoiceRoutes);
 app.use("/companyInfo", companyRoutes);
+app.use("/customer", customerRoutes);
 
 // Start the server
 const PORT = process.env.PORT;
