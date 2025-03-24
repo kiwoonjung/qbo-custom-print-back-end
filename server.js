@@ -7,14 +7,14 @@ import customerRoutes from "./routes/companyInfo.js";
 import errorHandler from "./middleware/errorHandler.js";
 import logger from "./middleware/logger.js";
 // import auth from "./middleware/auth.js";
-import cors from "./middleware/cors.js";
+import cors from "cors"; // Corrected import from the cors package
 
 const app = express();
 
 // Middleware
 app.use(
   cors({
-    origin: "chrome-extension://bkcjiigjjabcnlkcnjkbdeacehmcpbdn", // Only allow your Chrome extension
+    origin: "*", // Allow requests from any origin (use cautiously)
   })
 );
 app.use(logger); // Logging middleware
