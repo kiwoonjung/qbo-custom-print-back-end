@@ -16,6 +16,7 @@ app.use(
     origin: [
       "chrome-extension://bkcjiigjjabcnlkcnjkbdeacehmcpbdn",
       "chrome-extension://jdpebblpkmmcgldefddicgblgkggkpid",
+      "chrome-extension://eapnjnmhidniehmnaikajfomkofnibap",
       // Your specific extension origin
       "*", // Allow all origins, use carefully in production
     ],
