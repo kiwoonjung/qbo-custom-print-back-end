@@ -1,32 +1,29 @@
 import axios from "axios";
 import "dotenv/config";
 import { URLSearchParams } from "url"; // Node.js built-in module for URLSearchParams
-import fs from "fs"; // File system module to store tokens (replace with DB in production)
+import fs from "fs"; // To store tokens locally (e.g., for persistent storage)
 
-// Token storage file (replace with database if needed)
-const TOKEN_STORAGE_FILE = "./tokens.json";
+// Function to save tokens (use a persistent store for production)
+const saveTokens = (accessToken, refreshToken, realmId) => {
+  const tokenData = { accessToken, refreshToken, realmId };
+  fs.writeFileSync("tokens.json", JSON.stringify(tokenData)); // Save tokens to a file (or use a DB in production)
+};
 
-// Function to read stored tokens
-const getStoredTokens = () => {
-  if (fs.existsSync(TOKEN_STORAGE_FILE)) {
-    const data = fs.readFileSync(TOKEN_STORAGE_FILE, "utf-8");
+// Function to load tokens (if saved previously)
+const loadTokens = () => {
+  try {
+    const data = fs.readFileSync("tokens.json", "utf8");
     return JSON.parse(data);
+  } catch (err) {
+    return null;
   }
-  return null;
 };
 
-// Function to store tokens
-const storeTokens = (tokens) => {
-  fs.writeFileSync(TOKEN_STORAGE_FILE, JSON.stringify(tokens, null, 2));
-};
-
-/* READ */
 export const getClientId = async (req, res) => {
   try {
     if (!process.env.CLIENT_ID) {
       throw new Error("CLIENT_ID is not defined in environment variables");
     }
-    console.log("Received request for clientId");
     res.json({ clientId: process.env.CLIENT_ID });
   } catch (error) {
     console.error("Error in getClientId:", error.message);
@@ -39,15 +36,19 @@ export const getClientId = async (req, res) => {
 export const exchangeCode = async (req, res) => {
   const { code, redirectUri } = req.body;
 
-  try {
-    // Check if an admin token already exists
-    const storedTokens = getStoredTokens();
-    if (storedTokens && storedTokens.access_token) {
-      console.log("Using stored admin access token.");
-      return res.json(storedTokens);
-    }
+  // Try loading the stored token data (if any)
+  const savedTokens = loadTokens();
 
-    // Proceed with OAuth flow if no token is stored
+  if (savedTokens && savedTokens.accessToken) {
+    // If the access token is available, return it
+    return res.json({
+      access_token: savedTokens.accessToken,
+      refresh_token: savedTokens.refreshToken,
+      realmId: savedTokens.realmId,
+    });
+  }
+
+  try {
     const params = new URLSearchParams();
     params.append("grant_type", "authorization_code");
     params.append("code", code);
@@ -70,20 +71,69 @@ export const exchangeCode = async (req, res) => {
       }
     );
 
-    // Store tokens for future use
-    const tokenData = {
+    // Save the tokens for future use
+    saveTokens(
+      response.data.access_token,
+      response.data.refresh_token,
+      response.data.realmId
+    );
+
+    res.json({
       access_token: response.data.access_token,
       refresh_token: response.data.refresh_token,
-      realmId: response.data.realmId || "9341453571717976",
-    };
-    storeTokens(tokenData);
-
-    res.json(tokenData);
+      realmId: response.data.realmId,
+    });
   } catch (error) {
     console.error(
       "Error exchanging code for token:",
       error.response?.data || error.message
     );
     res.status(500).json({ error: "Failed to exchange code for token" });
+  }
+};
+
+// Token refresh logic (use this when the access token is expired)
+export const refreshToken = async (req, res) => {
+  const savedTokens = loadTokens();
+
+  if (!savedTokens || !savedTokens.refreshToken) {
+    return res.status(400).json({ error: "No refresh token found" });
+  }
+
+  try {
+    const params = new URLSearchParams();
+    params.append("grant_type", "refresh_token");
+    params.append("refresh_token", savedTokens.refreshToken);
+
+    const response = await axios.post(
+      "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer",
+      params.toString(),
+      {
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          Authorization: `Basic ${Buffer.from(
+            `${process.env.CLIENT_ID}:${process.env.CLIENT_SECRET}`
+          ).toString("base64")}`,
+        },
+      }
+    );
+
+    // Save the new access token and refresh token
+    saveTokens(
+      response.data.access_token,
+      response.data.refresh_token,
+      savedTokens.realmId
+    );
+
+    res.json({
+      access_token: response.data.access_token,
+      refresh_token: response.data.refresh_token,
+    });
+  } catch (error) {
+    console.error(
+      "Error refreshing token:",
+      error.response?.data || error.message
+    );
+    res.status(500).json({ error: "Failed to refresh token" });
   }
 };
