@@ -27,21 +27,21 @@ export const getClientId = async (req, res) => {
 };
 
 export const exchangeCode = async (req, res) => {
-  //   console.log("exchangecode", req.body);
-  //   console.log("data", process.env.CLIENT_ID, process.env.CLIENT_SECRET);
   const { code, redirectUri } = req.body;
 
   try {
-    // Create URL-encoded request body
     const params = new URLSearchParams();
     params.append("grant_type", "authorization_code");
     params.append("code", code);
     params.append("redirect_uri", redirectUri);
+    params.append(
+      "scope",
+      "com.intuit.quickbooks.accounting openid profile email"
+    ); // Adjust scope for non-admins
 
-    // Make the request to Intuit OAuth API
     const response = await axios.post(
       "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer",
-      params.toString(), // Send as URL-encoded string
+      params.toString(),
       {
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
@@ -52,12 +52,10 @@ export const exchangeCode = async (req, res) => {
       }
     );
 
-    // console.log("response", response.data);
-
     res.json({
       access_token: response.data.access_token,
       refresh_token: response.data.refresh_token,
-      realmId: response.data.realmId || "9341453571717976", // Fallback realmId
+      realmId: response.data.realmId || "9341453571717976",
     });
   } catch (error) {
     console.error(
