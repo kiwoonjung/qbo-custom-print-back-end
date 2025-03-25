@@ -1,18 +1,18 @@
 import axios from "axios";
 import "dotenv/config";
 import { URLSearchParams } from "url"; // Node.js built-in module for URLSearchParams
-import fs from "fs"; // To store tokens locally (e.g., for persistent storage)
+import fs from "fs"; // To store tokens locally (for simplicity, in production use DB)
 
-// Function to save tokens (use a persistent store for production)
-const saveTokens = (accessToken, refreshToken, realmId) => {
-  const tokenData = { accessToken, refreshToken, realmId };
-  fs.writeFileSync("tokens.json", JSON.stringify(tokenData)); // Save tokens to a file (or use a DB in production)
+// Function to save admin tokens (in a secure place in production, like a DB)
+const saveAdminTokens = (accessToken, refreshToken) => {
+  const tokenData = { accessToken, refreshToken, realmId: "9341453571717976" }; // Fixed realmId
+  fs.writeFileSync("admin_tokens.json", JSON.stringify(tokenData)); // Save tokens to a file
 };
 
-// Function to load tokens (if saved previously)
-const loadTokens = () => {
+// Function to load admin tokens
+const loadAdminTokens = () => {
   try {
-    const data = fs.readFileSync("tokens.json", "utf8");
+    const data = fs.readFileSync("admin_tokens.json", "utf8");
     return JSON.parse(data);
   } catch (err) {
     return null;
@@ -36,27 +36,11 @@ export const getClientId = async (req, res) => {
 export const exchangeCode = async (req, res) => {
   const { code, redirectUri } = req.body;
 
-  // Try loading the stored token data (if any)
-  const savedTokens = loadTokens();
-
-  if (savedTokens && savedTokens.accessToken) {
-    // If the access token is available, return it
-    return res.json({
-      access_token: savedTokens.accessToken,
-      refresh_token: savedTokens.refreshToken,
-      realmId: savedTokens.realmId,
-    });
-  }
-
   try {
     const params = new URLSearchParams();
     params.append("grant_type", "authorization_code");
     params.append("code", code);
     params.append("redirect_uri", redirectUri);
-    params.append(
-      "scope",
-      "com.intuit.quickbooks.accounting openid profile email"
-    );
 
     const response = await axios.post(
       "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer",
@@ -71,17 +55,13 @@ export const exchangeCode = async (req, res) => {
       }
     );
 
-    // Save the tokens for future use
-    saveTokens(
-      response.data.access_token,
-      response.data.refresh_token,
-      response.data.realmId
-    );
+    // Save the admin's tokens for future use (with fixed realmId)
+    saveAdminTokens(response.data.access_token, response.data.refresh_token);
 
     res.json({
       access_token: response.data.access_token,
       refresh_token: response.data.refresh_token,
-      realmId: response.data.realmId,
+      realmId: "9341453571717976", // Fixed realmId
     });
   } catch (error) {
     console.error(
@@ -92,18 +72,44 @@ export const exchangeCode = async (req, res) => {
   }
 };
 
-// Token refresh logic (use this when the access token is expired)
-export const refreshToken = async (req, res) => {
-  const savedTokens = loadTokens();
+// Using Admin Token for Non-Admin Users
+export const getAdminTokenForUser = async (req, res) => {
+  try {
+    const adminTokens = loadAdminTokens();
 
-  if (!savedTokens || !savedTokens.refreshToken) {
-    return res.status(400).json({ error: "No refresh token found" });
+    if (!adminTokens || !adminTokens.accessToken) {
+      return res.status(400).json({ error: "Admin token not found" });
+    }
+
+    // Use the admin token for API calls on behalf of the non-admin user
+    const response = await axios.get(
+      `https://quickbooks.api.intuit.com/v3/company/9341453571717976/some-endpoint`, // Fixed realmId
+      {
+        headers: {
+          Authorization: `Bearer ${adminTokens.accessToken}`,
+        },
+      }
+    );
+
+    res.json(response.data);
+  } catch (error) {
+    console.error("Error fetching data with admin token:", error.message);
+    res.status(500).json({ error: "Failed to fetch data with admin token" });
+  }
+};
+
+// Refresh the admin token if expired
+export const refreshAdminToken = async (req, res) => {
+  const adminTokens = loadAdminTokens();
+
+  if (!adminTokens || !adminTokens.refreshToken) {
+    return res.status(400).json({ error: "No refresh token found for admin" });
   }
 
   try {
     const params = new URLSearchParams();
     params.append("grant_type", "refresh_token");
-    params.append("refresh_token", savedTokens.refreshToken);
+    params.append("refresh_token", adminTokens.refreshToken);
 
     const response = await axios.post(
       "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer",
@@ -118,22 +124,15 @@ export const refreshToken = async (req, res) => {
       }
     );
 
-    // Save the new access token and refresh token
-    saveTokens(
-      response.data.access_token,
-      response.data.refresh_token,
-      savedTokens.realmId
-    );
+    // Save the refreshed tokens with fixed realmId
+    saveAdminTokens(response.data.access_token, response.data.refresh_token);
 
     res.json({
       access_token: response.data.access_token,
       refresh_token: response.data.refresh_token,
     });
   } catch (error) {
-    console.error(
-      "Error refreshing token:",
-      error.response?.data || error.message
-    );
-    res.status(500).json({ error: "Failed to refresh token" });
+    console.error("Error refreshing admin token:", error.message);
+    res.status(500).json({ error: "Failed to refresh admin token" });
   }
 };
