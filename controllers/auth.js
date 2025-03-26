@@ -1,4 +1,4 @@
-import pool from "../config/db.js";
+import sql from "../config/db.js"; // Import sql client from db.js
 import "dotenv/config";
 
 // Get Client ID (from environment variables or config)
@@ -50,10 +50,10 @@ export const exchangeCodeForToken = async (req, res) => {
 
     // Store tokens in Supabase or your database
     const { access_token, refresh_token, realmId } = tokenData;
-    await pool.query(
-      "INSERT INTO tokens (access_token, refresh_token, realm_id) VALUES ($1, $2, $3)",
-      [access_token, refresh_token, realmId]
-    );
+    await sql`
+      INSERT INTO tokens (access_token, refresh_token, realm_id)
+      VALUES (${access_token}, ${refresh_token}, ${realmId})
+    `;
 
     res.json({
       access_token,
@@ -70,15 +70,17 @@ export const exchangeCodeForToken = async (req, res) => {
 export const getAccessToken = async (req, res) => {
   try {
     // Retrieve the access token from your database
-    const result = await pool.query(
-      "SELECT access_token FROM tokens ORDER BY created_at DESC LIMIT 1"
-    );
+    const result = await sql`
+      SELECT access_token FROM tokens
+      ORDER BY created_at DESC
+      LIMIT 1
+    `;
 
-    if (result.rows.length === 0) {
+    if (result.length === 0) {
       return res.status(404).json({ error: "No access token found." });
     }
 
-    const accessToken = result.rows[0].access_token;
+    const accessToken = result[0].access_token;
     res.json({ access_token: accessToken });
   } catch (error) {
     console.error("Error fetching access token:", error);
