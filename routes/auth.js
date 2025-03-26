@@ -1,5 +1,5 @@
 import express from "express";
-import { getClientId, exchangeCode } from "../controllers/auth.js"; // Import controller functions
+import { getClientId, exchangeCodeForToken } from "../controllers/auth.js"; // Import controller functions
 
 const router = express.Router();
 
@@ -7,6 +7,6 @@ const router = express.Router();
 router.get("/get-client-id", getClientId); // Endpoint to get client ID
 router.get("/get-access-token", getAccessToken); // New route for getting access token
 /* POST */
-router.post("/exchange-code", exchangeCode); // Endpoint to exchange authorization code for tokens
+router.post("/exchange-code", exchangeCodeForToken); // Endpoint to exchange authorization code for tokens
 
 export default router;
