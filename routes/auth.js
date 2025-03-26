@@ -1,5 +1,9 @@
 import express from "express";
-import { getClientId, exchangeCodeForToken } from "../controllers/auth.js"; // Import controller functions
+import {
+  getClientId,
+  exchangeCodeForToken,
+  getAccessToken,
+} from "../controllers/auth.js"; // Import controller functions
 
 const router = express.Router();
 
