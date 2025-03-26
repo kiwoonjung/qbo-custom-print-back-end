@@ -1,69 +1,121 @@
-import axios from "axios";
-import "dotenv/config";
-import { URLSearchParams } from "url"; // Node.js built-in module for URLSearchParams
+import fetch from "node-fetch";
+import { pool } from "./db"; // Assuming you have a PostgreSQL connection pool setup with Supabase
 
-/* READ */
-export const getClientId = async (req, res) => {
-  try {
-    // Check if CLIENT_ID is defined
-    if (!process.env.CLIENT_ID) {
-      throw new Error("CLIENT_ID is not defined in environment variables");
-    }
-
-    // Log the request (optional, for debugging)
-    console.log("Received request for clientId");
-
-    // Send the clientId in the response
-    res.json({ clientId: process.env.CLIENT_ID });
-  } catch (error) {
-    // Log the error
-    console.error("Error in getClientId:", error.message);
-
-    // Send an error response
-    res
-      .status(500)
-      .json({ error: "Failed to fetch clientId", details: error.message });
-  }
-};
-
-export const exchangeCode = async (req, res) => {
-  //   console.log("exchangecode", req.body);
-  //   console.log("data", process.env.CLIENT_ID, process.env.CLIENT_SECRET);
+// Exchange authorization code for access token
+exports.exchangeCodeForToken = async (req, res) => {
   const { code, redirectUri } = req.body;
 
-  try {
-    // Create URL-encoded request body
-    const params = new URLSearchParams();
-    params.append("grant_type", "authorization_code");
-    params.append("code", code);
-    params.append("redirect_uri", redirectUri);
+  const clientId = process.env.QBO_CLIENT_ID;
+  const clientSecret = process.env.QBO_CLIENT_SECRET;
+  const authHeader = Buffer.from(`${clientId}:${clientSecret}`).toString(
+    "base64"
+  );
 
-    // Make the request to Intuit OAuth API
-    const response = await axios.post(
+  try {
+    const response = await fetch(
       "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer",
-      params.toString(), // Send as URL-encoded string
       {
+        method: "POST",
         headers: {
+          Authorization: `Basic ${authHeader}`,
           "Content-Type": "application/x-www-form-urlencoded",
-          Authorization: `Basic ${Buffer.from(
-            `${process.env.CLIENT_ID}:${process.env.CLIENT_SECRET}`
-          ).toString("base64")}`,
         },
+        body: new URLSearchParams({
+          grant_type: "authorization_code",
+          code,
+          redirect_uri: redirectUri,
+        }),
       }
     );
 
-    // console.log("response", response.data);
+    if (!response.ok) {
+      throw new Error("Failed to exchange token");
+    }
+
+    const tokenData = await response.json();
+
+    // Store tokens in Supabase
+    const { access_token, refresh_token, realmId } = tokenData;
+    await pool.query(
+      "INSERT INTO tokens (access_token, refresh_token, realm_id) VALUES ($1, $2, $3)",
+      [access_token, refresh_token, realmId]
+    );
 
     res.json({
-      access_token: response.data.access_token,
-      refresh_token: response.data.refresh_token,
-      realmId: response.data.realmId || "9341453571717976", // Fallback realmId
+      access_token,
+      refresh_token,
+      realmId,
     });
   } catch (error) {
-    console.error(
-      "Error exchanging code for token:",
-      error.response?.data || error.message
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Refresh access token
+exports.refreshAccessToken = async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      "SELECT * FROM tokens ORDER BY created_at DESC LIMIT 1"
     );
-    res.status(500).json({ error: "Failed to exchange code for token" });
+
+    if (rows.length === 0 || !rows[0].refresh_token) {
+      return res.status(401).json({ error: "No refresh token available" });
+    }
+
+    const refreshToken = rows[0].refresh_token;
+    const clientId = process.env.QBO_CLIENT_ID;
+    const clientSecret = process.env.QBO_CLIENT_SECRET;
+    const authHeader = Buffer.from(`${clientId}:${clientSecret}`).toString(
+      "base64"
+    );
+
+    const response = await fetch(
+      "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${authHeader}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({
+          grant_type: "refresh_token",
+          refresh_token: refreshToken,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to refresh token");
+    }
+
+    const newTokenData = await response.json();
+    await pool.query(
+      "UPDATE tokens SET access_token = $1, expires_in = $2 WHERE realm_id = $3",
+      [newTokenData.access_token, newTokenData.expires_in, rows[0].realm_id]
+    );
+
+    res.json({ access_token: newTokenData.access_token });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Serve stored token to non-admin users
+exports.getAccessToken = async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      "SELECT * FROM tokens ORDER BY created_at DESC LIMIT 1"
+    );
+    if (rows.length === 0) {
+      return res.status(401).json({ error: "Access token unavailable" });
+    }
+
+    res.json({
+      access_token: rows[0].access_token,
+      realmId: rows[0].realm_id,
+    });
+  } catch (error) {
+    console.error("Error fetching access token:", error.message);
+    res.status(500).json({ error: "Failed to fetch access token" });
   }
 };
