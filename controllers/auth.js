@@ -1,5 +1,7 @@
 import sql from "../config/db.js"; // Import sql client from db.js
-import "dotenv/config";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 // Get Client ID (from environment variables or config)
 export const getClientId = (req, res) => {

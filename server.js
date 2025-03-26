@@ -1,5 +1,5 @@
 import express from "express";
-import "dotenv/config";
+import dotenv from "dotenv";
 import invoiceRoutes from "./routes/invoice.js";
 import companyRoutes from "./routes/companyInfo.js";
 import authRoutes from "./routes/auth.js";
@@ -8,6 +8,7 @@ import errorHandler from "./middleware/errorHandler.js";
 import logger from "./middleware/logger.js";
 import cors from "cors"; // Corrected import from the cors package
 
+dotenv.config();
 const app = express();
 
 const allowedOrigins = [
