@@ -1,45 +1,86 @@
-// Example controller methods (auth.js)
+import { pool } from "../db"; // For interacting with Supabase or your database
 
+// Get Client ID (from environment variables or config)
 export const getClientId = (req, res) => {
-  const clientId = process.env.CLIENT_ID; // Assuming you store the client ID in environment variables
-  if (clientId) {
-    res.json({ clientId }); // Send the clientId as a response
-  } else {
-    res.status(500).json({ error: "Client ID not found" });
+  try {
+    const clientId = process.env.QBO_CLIENT_ID;
+    if (!clientId) {
+      return res.status(500).json({ error: "Client ID not configured!" });
+    }
+    res.json({ clientId });
+  } catch (error) {
+    console.error("Error fetching client ID:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 
-export const exchangeCode = async (req, res) => {
+// Exchange code for access token and store it in the database
+export const exchangeCodeForToken = async (req, res) => {
   const { code, redirectUri } = req.body;
 
+  const clientId = process.env.QBO_CLIENT_ID;
+  const clientSecret = process.env.QBO_CLIENT_SECRET;
+  const authHeader = Buffer.from(`${clientId}:${clientSecret}`).toString(
+    "base64"
+  );
+
   try {
-    const accessToken = await getAccessTokenFromOAuth2(code, redirectUri); // You need to implement this method
-    const refreshToken = await getRefreshToken(accessToken); // Implement token refresh logic if required
-    const realmId = await getRealmIdFromAccessToken(accessToken); // You may need to implement logic for getting realm ID
+    const response = await fetch(
+      "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${authHeader}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({
+          grant_type: "authorization_code",
+          code,
+          redirect_uri: redirectUri,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to exchange token");
+    }
+
+    const tokenData = await response.json();
+
+    // Store tokens in Supabase or your database
+    const { access_token, refresh_token, realmId } = tokenData;
+    await pool.query(
+      "INSERT INTO tokens (access_token, refresh_token, realm_id) VALUES ($1, $2, $3)",
+      [access_token, refresh_token, realmId]
+    );
 
     res.json({
-      access_token: accessToken,
-      refresh_token: refreshToken,
+      access_token,
+      refresh_token,
       realmId,
-    }); // Send back the tokens and realm ID
+    });
   } catch (error) {
     console.error("Error during token exchange:", error);
     res.status(500).json({ error: error.message });
   }
 };
 
-// Implement your OAuth 2.0 token fetching logic below (example functions):
-async function getAccessTokenFromOAuth2(code, redirectUri) {
-  // Simulate getting the access token from an OAuth2 provider (QuickBooks in your case)
-  return "dummy_access_token"; // Replace with actual implementation
-}
+// Get access token from the database (or generate a new one if not available)
+export const getAccessToken = async (req, res) => {
+  try {
+    // Retrieve the access token from your database
+    const result = await pool.query(
+      "SELECT access_token FROM tokens ORDER BY created_at DESC LIMIT 1"
+    );
 
-async function getRefreshToken(accessToken) {
-  // Simulate getting a refresh token
-  return "dummy_refresh_token"; // Replace with actual implementation
-}
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "No access token found." });
+    }
 
-async function getRealmIdFromAccessToken(accessToken) {
-  // Simulate fetching the realmId
-  return "dummy_realm_id"; // Replace with actual implementation
-}
+    const accessToken = result.rows[0].access_token;
+    res.json({ access_token: accessToken });
+  } catch (error) {
+    console.error("Error fetching access token:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
