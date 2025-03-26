@@ -1,4 +1,5 @@
 import { pool } from "../db"; // For interacting with Supabase or your database
+import "dotenv/config";
 
 // Get Client ID (from environment variables or config)
 export const getClientId = (req, res) => {

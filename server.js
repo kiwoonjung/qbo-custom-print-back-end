@@ -10,26 +10,25 @@ import cors from "cors"; // Corrected import from the cors package
 
 const app = express();
 
-// Middleware to enable CORS with Chrome extensions
+const allowedOrigins = [
+  "chrome-extension://bkcjiigjjabcnlkcnjkbdeacehmcpbdn",
+  "chrome-extension://jdpebblpkmmcgldefddicgblgkggkpid",
+  "chrome-extension://eapnjnmhidniehmnaikajfomkofnibap",
+  "chrome-extension://aicefnigcnpffooiiipdnopmjbidmoah",
+  "*", // If you want to allow all origins (careful in production)
+];
+
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allowed Chrome extension origins
-      const allowedOrigins = [
-        "chrome-extension://bkcjiigjjabcnlkcnjkbdeacehmcpbdn",
-        "chrome-extension://jdpebblpkmmcgldefddicgblgkggkpid",
-        "chrome-extension://eapnjnmhidniehmnaikajfomkofnibap",
-        "chrome-extension://aicefnigcnpffooiiipdnopmjbidmoah",
-        "*", // If you want to allow all origins (use carefully in production)
-      ];
-
+      // Allow the Chrome extension origins to access your backend
       if (allowedOrigins.includes(origin) || !origin) {
         callback(null, true); // Allow the request
       } else {
-        callback(new Error("Not allowed by CORS")); // Deny the request
+        callback(new Error("Not allowed by CORS"));
       }
     },
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // Allow these HTTP methods
+    methods: ["GET", "POST", "PUT", "DELETE"], // Allow necessary HTTP methods
     allowedHeaders: ["Content-Type", "Authorization"], // Allow specific headers
   })
 );
