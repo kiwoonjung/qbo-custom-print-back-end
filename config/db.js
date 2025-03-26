@@ -10,6 +10,8 @@ const pool = new Pool({
   ssl: {
     rejectUnauthorized: false, // Required for Supabase
   },
+  host: "db.rmcukybxmacfbisyzfoj.supabase.co", // Explicitly set host
+  dnsFamily: 4,
 });
 
 const createTable = async () => {
