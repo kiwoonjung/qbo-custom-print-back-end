@@ -13,14 +13,22 @@ const app = express();
 // Middleware
 app.use(
   cors({
-    origin: [
-      "chrome-extension://bkcjiigjjabcnlkcnjkbdeacehmcpbdn",
-      "chrome-extension://jdpebblpkmmcgldefddicgblgkggkpid",
-      "chrome-extension://eapnjnmhidniehmnaikajfomkofnibap",
-      "chrome-extension://aicefnigcnpffooiiipdnopmjbidmoah",
-      // Your specific extension origin
-      "*", // Allow all origins, use carefully in production
-    ],
+    origin: (origin, callback) => {
+      // Allow the Chrome extension origins to access your backend
+      const allowedOrigins = [
+        "chrome-extension://bkcjiigjjabcnlkcnjkbdeacehmcpbdn",
+        "chrome-extension://jdpebblpkmmcgldefddicgblgkggkpid",
+        "chrome-extension://eapnjnmhidniehmnaikajfomkofnibap",
+        "chrome-extension://aicefnigcnpffooiiipdnopmjbidmoah",
+        "*", // If you want to allow all origins (careful in production)
+      ];
+
+      if (allowedOrigins.includes(origin) || !origin) {
+        callback(null, true); // Allow the request
+      } else {
+        callback(new Error("Not allowed by CORS")); // Deny the request
+      }
+    },
   })
 );
 
