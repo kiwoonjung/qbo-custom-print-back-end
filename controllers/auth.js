@@ -49,21 +49,30 @@ export const exchangeCodeForToken = async (req, res) => {
     }
 
     const tokenData = await response.json();
+    console.log("✅ Token Data:", tokenData);
 
-    // Store tokens in Supabase or your database
-    const { access_token, refresh_token, realmId } = tokenData;
+    // Use default realmId if missing
+    const realmId = tokenData.realmId || "9341453571717976";
+
+    console.log("📢 Storing in database: ", {
+      access_token: tokenData.access_token,
+      refresh_token: tokenData.refresh_token,
+      realmId,
+    });
+
+    // Store tokens in the database
     await sql`
       INSERT INTO tokens (access_token, refresh_token, realm_id)
-      VALUES (${access_token}, ${refresh_token}, ${realmId})
+      VALUES (${tokenData.access_token}, ${tokenData.refresh_token}, ${realmId})
     `;
 
     res.json({
-      access_token,
-      refresh_token,
+      access_token: tokenData.access_token,
+      refresh_token: tokenData.refresh_token,
       realmId,
     });
   } catch (error) {
-    console.error("Error during token exchange:", error);
+    console.error("🔥 Error during token exchange:", error);
     res.status(500).json({ error: error.message });
   }
 };
