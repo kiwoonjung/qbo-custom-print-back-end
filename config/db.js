@@ -7,7 +7,7 @@ dotenv.config();
 // Establish connection to the database using Supabase URL (no SSL)
 const sql = postgres({
   user: process.env.DB_USER,
-  host: process.env.DB_HOST,
+  host: "[2600:1f11:4e2:e202:30ce:60ae:e9cd:2f9c]", // IPv6 with brackets
   port: process.env.DB_PORT,
   database: process.env.DB_NAME,
   password: process.env.DB_PASSWORD,
