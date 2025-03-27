@@ -5,13 +5,8 @@ import dotenv from "dotenv";
 dotenv.config();
 
 // Establish connection to the database using Supabase URL (no SSL)
-const sql = postgres({
-  user: process.env.DB_USER,
-  host: "[2600:1f11:4e2:e202:30ce:60ae:e9cd:2f9c]", // IPv6 with brackets
-  port: process.env.DB_PORT,
-  database: process.env.DB_NAME,
-  password: process.env.DB_PASSWORD,
-  ssl: { rejectUnauthorized: false }, // Optional: Enable SSL for production
+const sql = postgres(process.env.DATABASE_URL, {
+  ssl: false, // Disable SSL
 });
 
 // Function to create the table if it doesn't exist
