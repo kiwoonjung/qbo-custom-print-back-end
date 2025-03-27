@@ -16,6 +16,7 @@ const allowedOrigins = [
   "chrome-extension://jdpebblpkmmcgldefddicgblgkggkpid",
   "chrome-extension://eapnjnmhidniehmnaikajfomkofnibap",
   "chrome-extension://aicefnigcnpffooiiipdnopmjbidmoah",
+  "chrome-extension://ngiianpgceihdmkdpkddlhimmedhkpnp",
   "*", // If you want to allow all origins (careful in production)
 ];
 
