@@ -3,7 +3,7 @@ import {
   getClientId,
   exchangeCodeForToken,
   getAccessToken,
-} from "../controllers/auth.js"; // Import controller functions
+} from "../controllers/auth.js";
 
 const router = express.Router();
 
